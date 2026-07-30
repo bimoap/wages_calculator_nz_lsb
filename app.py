@@ -8,7 +8,7 @@ st.caption("Modeled after standard hourly payslip calculations")
 
 # Sidebar - Developer Credit
 st.sidebar.markdown("### App Information")
-st.sidebar.text("App developed & maintained by: Bimo")
+st.sidebar.markdown("App developed & maintained by: **Bimo**")
 
 # 1. Inputs Section
 st.subheader("1. Enter Hourly Rate & Total Hours")
@@ -32,27 +32,34 @@ with col2:
         step=0.25
     )
 
-# Optional Allowances (toggle to include)
-with st.expander("Additional Allowances (Optional)"):
-    col_al1, col_al2 = st.columns(2)
-    with col_al1:
-        taxable_allowance = st.number_input(
-            "Taxable Allowance ($)", 
-            min_value=0.0, 
-            value=63.46, 
-            step=1.0, 
-            format="%.2f"
-        )
-    with col_al2:
-        non_taxable_allowance = st.number_input(
-            "Non-Taxable Allowance ($)", 
-            min_value=0.0, 
-            value=12.36, 
-            step=1.0, 
-            format="%.2f"
-        )
+# 2. Allowances Section
+st.subheader("2. Allowances & Deductions")
+col_al1, col_al2 = st.columns(2)
 
-# 2. Calculation Logic
+with col_al1:
+    st.markdown("**Taxable Allowances**")
+    unimed_contribution = st.number_input(
+        "Company Contribution Unimed ($)", 
+        value=63.46,
+        step=1.0,
+        format="%.2f",
+        help="Included in taxable earnings"
+    )
+    total_taxable_allowances = unimed_contribution
+
+with col_al2:
+    st.markdown("**Non-Taxable Payments**")
+    weekend_days = st.number_input(
+        "Weekend Allowance (Days Worked)", 
+        min_value=0.0, 
+        value=1.0, 
+        step=1.0
+    )
+    weekend_rate = 12.36
+    total_non_taxable = weekend_days * weekend_rate
+    st.caption(f"Calculated Weekend Allowance: ${total_non_taxable:.2f}")
+
+# 3. Calculation Logic
 # Hours breakdown based on tiers: 0-40 (1.0x), 40-49 (1.5x), >49 (2.0x)
 ord_hours = min(total_hours, 40.0)
 ot15_hours = max(0.0, min(total_hours - 40.0, 9.0))
@@ -69,10 +76,10 @@ ot15_val = ot15_hours * ot15_rate
 ot20_val = ot20_hours * ot20_rate
 
 total_hourly_earnings = ord_val + ot15_val + ot20_val
-total_taxable = total_hourly_earnings + taxable_allowance
-gross_pay = total_taxable + non_taxable_allowance
+total_taxable = total_hourly_earnings + total_taxable_allowances
+gross_pay = total_taxable + total_non_taxable
 
-# 3. Output / Display
+# 4. Output / Display
 st.divider()
 
 # High-level metrics
@@ -114,9 +121,9 @@ st.table(earnings_data)
 st.markdown(
     f"""
     * **Total Hourly Earnings:** `${total_hourly_earnings:,.2f}`
-    * **Taxable Allowances:** `${taxable_allowance:,.2f}`
+    * **Taxable Allowances (Unimed):** `${total_taxable_allowances:,.2f}`
     * **Total Taxable:** `${total_taxable:,.2f}`
-    * **Non-Taxable Payments:** `${non_taxable_allowance:,.2f}`
+    * **Non-Taxable Payments (Weekend Meal):** `${total_non_taxable:,.2f}`
     * **Gross Pay:** **`${gross_pay:,.2f}`**
     """
 )
