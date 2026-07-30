@@ -1,4 +1,9 @@
 import streamlit as st
+import math
+
+# Helper function to truncate to 2 decimal places (payroll style)
+def truncate_cents(val):
+    return math.floor(val * 100) / 100.0
 
 # Set page config
 st.set_page_config(page_title="Weekly Wage Calculator", page_icon="📝", layout="centered")
@@ -28,7 +33,7 @@ with col2:
     total_hours = st.number_input(
         "Total Hours Worked", 
         min_value=0.0, 
-        value=56.75, 
+        value=56.25, 
         step=0.25
     )
 
@@ -75,28 +80,29 @@ with col_al3:
 
 # 3. Calculation Logic
 
-# Earnings
+# Earnings breakdown
 ord_hours = min(total_hours, 40.0)
 ot15_hours = max(0.0, min(total_hours - 40.0, 9.0))
 ot20_hours = max(0.0, total_hours - 49.0)
 
+# Pay Rates
 ord_rate = base_rate * 1.0000
 ot15_rate = base_rate * 1.5000
 ot20_rate = base_rate * 2.0000
 
-ord_val = ord_hours * ord_rate
-ot15_val = ot15_hours * ot15_rate
-ot20_val = ot20_hours * ot20_rate
+# Values (Rounded to 2 decimal places exactly as they appear on the payslip)
+ord_val = round(ord_hours * ord_rate, 2)
+ot15_val = round(ot15_hours * ot15_rate, 2)
+ot20_val = round(ot20_hours * ot20_rate, 2)
 
 total_hourly_earnings = ord_val + ot15_val + ot20_val
 total_taxable = total_hourly_earnings + total_taxable_allowances
 gross_pay = total_taxable + total_non_taxable
 
-# PAYE & ACC Calculation (Tax Code: M)
-# Annualize taxable income to find the bracket
+# PAYE Calculation (Annualized, Tax Code: M)
 annual_taxable = total_taxable * 52
-
 annual_tax = 0.0
+
 if annual_taxable <= 15600:
     annual_tax = annual_taxable * 0.105
 elif annual_taxable <= 53500:
@@ -108,16 +114,17 @@ elif annual_taxable <= 180000:
 else:
     annual_tax = (15600 * 0.105) + (37900 * 0.175) + (24600 * 0.30) + (101900 * 0.33) + ((annual_taxable - 180000) * 0.39)
 
-weekly_income_tax = annual_tax / 52
-
 # ACC Levy (1.75% up to a maximum salary of $156,641)
 annual_acc = min(annual_taxable, 156641) * 0.0175
-weekly_acc = annual_acc / 52
+
+# Truncate intermediate values to prevent the 1-cent rounding drift
+weekly_income_tax = truncate_cents(annual_tax / 52)
+weekly_acc = truncate_cents(annual_acc / 52)
 
 total_paye = weekly_income_tax + weekly_acc
 
-# KiwiSaver Calculation (calculated on total taxable pay)
-kiwisaver_deduction = total_taxable * (kiwisaver_percent / 100)
+# KiwiSaver Calculation
+kiwisaver_deduction = round(total_taxable * (kiwisaver_percent / 100), 2)
 
 # Total Deductions & Net Pay
 total_deductions = total_paye + kiwisaver_deduction + unimed_deduction
